@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Next Word Predictor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .input-container {
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .text-input {
+            width: 100%;
+            min-height: 120px;
+            padding: 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            line-height: 1.6;
+            resize: vertical;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .text-input:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .text-input::placeholder {
+            color: #a0a6b1;
+        }
+
+        .loading {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #4facfe;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .suggestions-container {
+            position: relative;
+        }
+
+        .suggestions-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e1e5e9;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid #f5f5f5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s ease;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .suggestion-word {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .suggestion-probability {
+            font-size: 0.85rem;
+            color: #666;
+            background: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+
+        .predictions-display {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .predictions-display.show {
+            display: block;
+        }
+
+        .predictions-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .prediction-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .prediction-pill {
+            background: white;
+            border: 2px solid #4facfe;
+            color: #4facfe;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .prediction-pill:hover {
+            background: #4facfe;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .prediction-percentage {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .status-error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .status-info {
+            background: #e8f4fd;
+            color: #1976d2;
+            border: 1px solid #bbdefb;
+        }
+
+        .api-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .api-info .icon {
+            font-size: 1.2rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .prediction-pills {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 Next Word Predictor</h1>
+            <p>AI-powered text completion using LSTM neural networks</p>
+        </div>
+        
+        <div class="content">
+            <div class="input-container">
+                <div class="suggestions-container">
+                    <textarea 
+                        id="textInput" 
+                        class="text-input" 
+                        placeholder="Start typing your text here... The AI will suggest the next word as you type."
+                        rows="5"
+                    ></textarea>
+                    <div class="loading" id="loading"></div>
+                    <div class="suggestions-dropdown" id="suggestionsDropdown"></div>
+                </div>
+            </div>
+            
+            <div class="predictions-display" id="predictionsDisplay">
+                <div class="predictions-title">💡 Word Suggestions:</div>
+                <div class="prediction-pills" id="predictionPills"></div>
+            </div>
+            
+            <div class="status-message" id="statusMessage"></div>
+            
+            <div class="api-info">
+                <span class="icon">ℹ️</span>
+                <span>Make sure your FastAPI server is running on <strong>localhost:8000</strong></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class NextWordPredictor {
+            constructor() {
+                this.textInput = document.getElementById('textInput');
+                this.loading = document.getElementById('loading');
+                this.suggestionsDropdown = document.getElementById('suggestionsDropdown');
+                this.predictionsDisplay = document.getElementById('predictionsDisplay');
+                this.predictionPills = document.getElementById('predictionPills');
+                this.statusMessage = document.getElementById('statusMessage');
+                
+                this.debounceTimer = null;
+                this.apiBaseUrl = 'http://localhost:8000';
+                this.currentPredictions = [];
+                
+                this.init();
+            }
+            
+            init() {
+                this.textInput.addEventListener('input', this.handleInput.bind(this));
+                this.textInput.addEventListener('focus', this.handleFocus.bind(this));
+                this.textInput.addEventListener('blur', this.handleBlur.bind(this));
+                
+                // Close dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.suggestions-container')) {
+                        this.hideDropdown();
+                    }
+                });
+            }
+            
+            handleInput() {
+                const text = this.textInput.value.trim();
+                
+                // Clear previous timer
+                if (this.debounceTimer) {
+                    clearTimeout(this.debounceTimer);
+                }
+                
+                // Set new timer
+                this.debounceTimer = setTimeout(() => {
+                    if (text.length > 0) {
+                        this.getPredictions(text);
+                    } else {
+                        this.hideDropdown();
+                        this.hidePredictionsDisplay();
+                    }
+                }, 300);
+            }
+            
+            handleFocus() {
+                if (this.currentPredictions.length > 0) {
+                    this.showDropdown();
+                }
+            }
+            
+            handleBlur() {
+                // Delay hiding to allow for clicks
+                setTimeout(() => {
+                    this.hideDropdown();
+                }, 150);
+            }
+            
+            async getPredictions(text) {
+                this.showLoading();
+                this.hideStatus();
+                
+                try {
+                    const response = await fetch(`${this.apiBaseUrl}/predict`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            text: text,
+                            top_k: 5
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.currentPredictions = data.predictions;
+                        this.displayPredictions(data.predictions);
+                        this.showDropdown();
+                    } else {
+                        const errorData = await response.json();
+                        this.showStatus('error', `API Error: ${errorData.detail || 'Unknown error'}`);
+                        this.hideDropdown();
+                    }
+                } catch (error) {
+                    console.error('Network error:', error);
+                    this.showStatus('error', 'Could not connect to the API. Make sure the server is running on localhost:8000');
+                    this.hideDropdown();
+                } finally {
+                    this.hideLoading();
+                }
+            }
+            
+            displayPredictions(predictions) {
+                // Update dropdown
+                this.suggestionsDropdown.innerHTML = '';
+                predictions.forEach(pred => {
+                    const item = document.createElement('div');
+                    item.className = 'suggestion-item';
+                    item.innerHTML = `
+                        <span class="suggestion-word">${pred.word}</span>
+                        <span class="suggestion-probability">${(pred.probability * 100).toFixed(1)}%</span>
+                    `;
+                    item.addEventListener('click', () => this.selectPrediction(pred.word));
+                    this.suggestionsDropdown.appendChild(item);
+                });
+                
+                // Update pills display
+                this.predictionPills.innerHTML = '';
+                predictions.forEach(pred => {
+                    const pill = document.createElement('div');
+                    pill.className = 'prediction-pill';
+                    pill.innerHTML = `
+                        <span>${pred.word}</span>
+                        <span class="prediction-percentage">${(pred.probability * 100).toFixed(0)}%</span>
+                    `;
+                    pill.addEventListener('click', () => this.selectPrediction(pred.word));
+                    this.predictionPills.appendChild(pill);
+                });
+                
+                this.showPredictionsDisplay();
+            }
+            
+            selectPrediction(word) {
+                const currentText = this.textInput.value;
+                const words = currentText.trim().split(/\s+/);
+                words.push(word);
+                
+                this.textInput.value = words.join(' ') + ' ';
+                this.textInput.focus();
+                
+                // Set cursor to end
+                this.textInput.setSelectionRange(this.textInput.value.length, this.textInput.value.length);
+                
+                this.hideDropdown();
+                
+                // Trigger new predictions for the updated text
+                setTimeout(() => {
+                    this.handleInput();
+                }, 100);
+            }
+            
+            showLoading() {
+                this.loading.style.display = 'block';
+            }
+            
+            hideLoading() {
+                this.loading.style.display = 'none';
+            }
+            
+            showDropdown() {
+                if (this.currentPredictions.length > 0) {
+                    this.suggestionsDropdown.style.display = 'block';
+                }
+            }
+            
+            hideDropdown() {
+                this.suggestionsDropdown.style.display = 'none';
+            }
+            
+            showPredictionsDisplay() {
+                this.predictionsDisplay.classList.add('show');
+            }
+            
+            hidePredictionsDisplay() {
+                this.predictionsDisplay.classList.remove('show');
+            }
+            
+            showStatus(type, message) {
+                this.statusMessage.className = `status-message status-${type}`;
+                this.statusMessage.textContent = message;
+                this.statusMessage.style.display = 'block';
+            }
+            
+            hideStatus() {
+                this.statusMessage.style.display = 'none';
+            }
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new NextWordPredictor();
+        });
+    </script>
+</body>
+</html>
