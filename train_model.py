@@ -321,29 +321,29 @@ def test_text_generation(model, dataset, seed_texts, device):
 
 # Main training script
 if __name__ == "__main__":
-    # Sample text corpus (you can replace with your own text file)
-    sample_text = """
-    The quick brown fox jumps over the lazy dog. The dog was sleeping under the tree.
-    The fox was very clever and quick. It jumped over the dog again and again.
-    The lazy dog finally woke up and chased the fox. The fox ran into the forest.
-    The dog returned to sleep under the tree. The sun was shining bright in the sky.
-    
-    Machine learning is a fascinating field of artificial intelligence. Neural networks 
-    can learn complex patterns from data. Deep learning has revolutionized many areas
-    of computer science including natural language processing and computer vision.
-    
-    Python is a powerful programming language widely used in data science and machine learning.
-    PyTorch is a popular deep learning framework that makes it easy to build and train neural networks.
-    The LSTM architecture is particularly effective for sequential data like text and time series.
-    
-    Natural language processing involves teaching computers to understand and generate human language.
-    Word embeddings capture semantic relationships between words in high-dimensional vector spaces.
-    Recurrent neural networks can process sequences of variable length making them ideal for text.
-    
-    Training deep learning models requires careful tuning of hyperparameters like learning rate.
-    Overfitting can be prevented using techniques like dropout and early stopping.
-    Cross-validation helps assess model performance and generalization capability.
-    """
+    # Load the 50MB sampled English Gutenberg Dialogue Dataset for optimal training
+    print("Loading 50MB English Gutenberg Dataset Sample for Enhanced Training...")
+    try:
+        with open('dataset_sample_50mb.txt', 'r', encoding='utf-8') as f:
+            sample_text = f.read()
+        print(f"✓ Enhanced dataset sample loaded successfully! Size: {len(sample_text):,} characters")
+        print(f"  This is {len(sample_text)/1000000:.1f}MB of high-quality literary text")
+    except FileNotFoundError:
+        print("❌ Dataset sample file 'dataset_sample_50mb.txt' not found!")
+        print("Creating sample from original dataset...")
+        try:
+            import subprocess
+            subprocess.run(['head', '-c', '50000000', 'dataset_en/train.txt'], 
+                          stdout=open('dataset_sample_50mb.txt', 'w'), check=True)
+            with open('dataset_sample_50mb.txt', 'r', encoding='utf-8') as f:
+                sample_text = f.read()
+            print(f"✓ Created and loaded sample: {len(sample_text):,} characters")
+        except Exception as e2:
+            print(f"❌ Could not create sample: {e2}")
+            exit(1)
+    except Exception as e:
+        print(f"❌ Error loading dataset: {e}")
+        exit(1)
     
     print("LSTM Language Model Training Script")
     print("=" * 60)

@@ -8,30 +8,25 @@ import logging
 from predict import load_predictor_with_corpus
 import traceback
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# FastAPI app instance
 app = FastAPI(
     title="Next Word Prediction API",
     description="LSTM-based next word prediction service",
     version="1.0.0"
 )
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["*"], 
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],  
+    allow_headers=["*"],
 )
 
-# Global predictor instance
 predictor = None
 
-# Pydantic models for request/response
 class PredictionRequest(BaseModel):
     text: str
     top_k: Optional[int] = 3
@@ -51,9 +46,24 @@ class HealthResponse(BaseModel):
     model_loaded: bool
     vocab_size: Optional[int] = None
 
-# Training corpus (same as used in training)
-TRAINING_CORPUS = """
-The quick brown fox jumps over the lazy dog. The dog was sleeping under the tree.
+# Training corpus will be loaded when needed
+TRAINING_CORPUS = None
+
+def load_model():
+    """Load the trained model on startup."""
+    global predictor, TRAINING_CORPUS
+    
+    model_path = 'next_word_lstm.pth'
+    
+    if not os.path.exists(model_path):
+        logger.error(f"Model file '{model_path}' not found.")
+        logger.info("Please run 'python3 train_model.py' first to train a model.")
+        return False
+    
+    try:
+        # Use the original simple corpus that was used for training (compatible vocabulary)
+        logger.info("Using original training corpus for vocabulary compatibility...")
+        TRAINING_CORPUS = """The quick brown fox jumps over the lazy dog. The dog was sleeping under the tree.
 The fox was very clever and quick. It jumped over the dog again and again.
 The lazy dog finally woke up and chased the fox. The fox ran into the forest.
 The dog returned to sleep under the tree. The sun was shining bright in the sky.
@@ -72,21 +82,11 @@ Recurrent neural networks can process sequences of variable length making them i
 
 Training deep learning models requires careful tuning of hyperparameters like learning rate.
 Overfitting can be prevented using techniques like dropout and early stopping.
-Cross-validation helps assess model performance and generalization capability.
-"""
-
-def load_model():
-    """Load the trained model on startup."""
-    global predictor
-    
-    model_path = 'next_word_lstm.pth'
-    
-    if not os.path.exists(model_path):
-        logger.error(f"Model file '{model_path}' not found.")
-        logger.info("Please run 'python3 train_model.py' first to train a model.")
-        return False
-    
-    try:
+Cross-validation helps assess model performance and generalization capability."""
+        
+        logger.info(f"✓ Training corpus loaded: {len(TRAINING_CORPUS):,} characters")
+        
+        # Load model with compatible corpus
         logger.info("Loading trained model...")
         predictor = load_predictor_with_corpus(
             text_corpus=TRAINING_CORPUS,
